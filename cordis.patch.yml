@@ -1,0 +1,3 @@
+- insert:
+    - id: organization-host
+      name: dsh-plugin-organization

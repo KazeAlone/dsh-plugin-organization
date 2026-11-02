@@ -1,0 +1,27 @@
+{
+  "name": "dsh-plugin-organization",
+  "version": "0.1.0",
+  "description": "Durable, version-gated Agent organizations for DeepSeek Harness",
+  "type": "module",
+  "main": "./src/host.mjs",
+  "bin": { "dsh-organization": "./scripts/control.mjs" },
+  "exports": {
+    ".": "./src/host.mjs",
+    "./core": "./src/index.mjs",
+    "./runtime/dsh": "./src/runtime/dsh.mjs",
+    "./template": "./templates/three-provinces.mjs"
+  },
+  "files": ["src", "templates", "scripts/control.mjs", "cordis.patch.yml", "README.md", "docs", "LICENSE"],
+  "engines": { "node": ">=24.9.0" },
+  "dsh": { "manifestVersion": 1, "bundle": { "patch": "./cordis.patch.yml" } },
+  "scripts": {
+    "test": "node --test",
+    "check": "node scripts/check.mjs",
+    "demo": "node examples/demo.mjs",
+    "prepack": "npm run check && npm test"
+  },
+  "peerDependencies": { "@deepseek-ai/cordis": "*" },
+  "peerDependenciesMeta": { "@deepseek-ai/cordis": { "optional": true } },
+  "repository": { "type": "git", "url": "https://github.com/KazeAlone/dsh-plugin-organization.git" },
+  "license": "MIT"
+}
