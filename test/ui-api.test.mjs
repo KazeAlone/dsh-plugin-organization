@@ -14,7 +14,11 @@ function setup(t, definition = threeProvinces(), runtime = { async execute() { r
   const agents = new Map([[agent.id, agent], [child.id, child]])
   const api = new OrganizationHostApi(engine, definition, id => agents.get(id), async () => '/workspace')
   let invocation = { peer: { principal: { kind: 'owner' } } }
-  const ui = new OrganizationUiApi(api, () => [...agents.values()], () => invocation)
+  const uiApi = new OrganizationUiApi(api, () => [...agents.values()])
+  const ui = new Proxy(uiApi, { get(target, key) {
+    const value = target[key]
+    return typeof value === 'function' ? (...args) => value.call(target, ...args, invocation) : value
+  } })
   t.after(async () => { await engine.close(); store.close() })
   return { store, engine, api, ui, agent, agents, setInvocation(value) { invocation = value } }
 }

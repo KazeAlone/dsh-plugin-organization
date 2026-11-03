@@ -29,7 +29,7 @@ export default class OrganizationService extends TypertRemoteService {
     }) } catch (error) { this.store.close(); throw error }
     this.api = new OrganizationHostApi(this.engine, definition, id => agents.get(id),
       (agent, signal) => ctx.get('workingDirectory').ensure(agent, signal))
-    this.ui = new OrganizationUiApi(this.api, () => agents.list(), () => this.ctx.invocation)
+    this.ui = new OrganizationUiApi(this.api, () => agents.list())
     ctx.effect(() => ctx.get('typert').register({
       package: 'dsh-plugin-organization', face: 'host', schemas: [],
       model: { services: [], events: [], objects: [] }, invocations: ORGANIZATION_DESCRIPTORS,
@@ -70,11 +70,12 @@ export default class OrganizationService extends TypertRemoteService {
     } catch (error) { return fail(error) }
   }
 
-  uiOverview(sessionId) { return this.remoteCall(() => this.ui.overview(sessionId)) }
-  uiSnapshot(runId, sessionId) { return this.remoteCall(() => this.ui.snapshot(runId, sessionId)) }
-  uiStart(sessionId, requirement) { return this.remoteCall(() => this.ui.start(sessionId, requirement)) }
-  uiCancel(runId, sessionId) { return this.remoteCall(() => this.ui.cancel(runId, sessionId)) }
-  uiResume(runId, sessionId) { return this.remoteCall(() => this.ui.resume(runId, sessionId)) }
-  uiRetry(runId, sessionId, nodeId, reason) { return this.remoteCall(() => this.ui.retry(runId, sessionId, nodeId, reason)) }
-  uiApprove(runId, sessionId, nodeId, inputDigest, reason) { return this.remoteCall(() => this.ui.approve(runId, sessionId, nodeId, inputDigest, reason)) }
+  // Gateway derives a receiver Context for each call. Read identity here, never in constructor closures.
+  uiOverview(sessionId) { return this.remoteCall(() => this.ui.overview(sessionId, this.ctx.invocation)) }
+  uiSnapshot(runId, sessionId) { return this.remoteCall(() => this.ui.snapshot(runId, sessionId, this.ctx.invocation)) }
+  uiStart(sessionId, requirement) { return this.remoteCall(() => this.ui.start(sessionId, requirement, this.ctx.invocation)) }
+  uiCancel(runId, sessionId) { return this.remoteCall(() => this.ui.cancel(runId, sessionId, this.ctx.invocation)) }
+  uiResume(runId, sessionId) { return this.remoteCall(() => this.ui.resume(runId, sessionId, this.ctx.invocation)) }
+  uiRetry(runId, sessionId, nodeId, reason) { return this.remoteCall(() => this.ui.retry(runId, sessionId, nodeId, reason, this.ctx.invocation)) }
+  uiApprove(runId, sessionId, nodeId, inputDigest, reason) { return this.remoteCall(() => this.ui.approve(runId, sessionId, nodeId, inputDigest, reason, this.ctx.invocation)) }
 }

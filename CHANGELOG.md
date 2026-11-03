@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Fix the browser workbench incorrectly rejecting authenticated Host owners. Read invocation identity from each Gateway-derived method receiver instead of a constructor-captured root Context.
+- Keep missing/non-owner callers denied and approval identity derived from the Host; no permission check is disabled.
+- Add a real DSH authenticated RPC smoke test and a regression for distinct construction/request Contexts.
+
 ## 0.2.0
 
 - Add the Organization workbench sidebar entry and per-session tab.

@@ -117,4 +117,6 @@ DSH_HOME="$PWD/data" npx dsh web
 
 使用 GitHub 地址安装的用户，可通过 DSH 插件页更新/重新安装 `github:KazeAlone/dsh-plugin-organization`，然后重启宿主并刷新页面。私有仓库仍需本机 GitHub 读取权限。
 
-排查入口缺失时，先确认 `package.json` 中版本为 `0.2.0`，包含 `dsh.client`、`exports["./client"]`，且 `dist/client.js` 存在。浏览器模块必须以包根 `dsh-plugin-organization` 作为宿主插件行名；不要把该行改成 `/core` 或 `/remote` 子路径。缺少 `typert` 服务时宿主插件不会激活，应检查 DSH 版本与 profile 组合。
+排查入口缺失时，先确认 `package.json` 中版本为 `0.2.1`，包含 `dsh.client`、`exports["./client"]`，且 `dist/client.js` 存在。浏览器模块必须以包根 `dsh-plugin-organization` 作为宿主插件行名；不要把该行改成 `/core` 或 `/remote` 子路径。缺少 `typert` 服务时宿主插件不会激活，应检查 DSH 版本与 profile 组合。
+
+0.2.0 的界面可能显示“无法连接组织服务”，具体信息为 `Organization UI requires the authenticated Host owner`。这是插件把构造时的根 Context 误用为当前 RPC Context 的缺陷，已在 0.2.1 修复。更新宿主插件并重启 DSH，保留原 `DSH_HOME` 和数据库；无需删除数据或关闭权限检查。

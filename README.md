@@ -2,7 +2,7 @@
 
 基于 DeepSeek Harness 的可持久化 Agent 组织编排插件，提供三省六部模板、DSH 宿主工具和可点击的组织工作台。
 
-**版本：0.2.0，实验性。已有浏览器工作台，组织定义暂为只读展示。** 模型能力、文件权限和真实交付质量仍取决于所配置的 DSH profile/preset；本插件不会把提示词当作沙箱权限。
+**版本：0.2.1，实验性。已有浏览器工作台，组织定义暂为只读展示。** 模型能力、文件权限和真实交付质量仍取决于所配置的 DSH profile/preset；本插件不会把提示词当作沙箱权限。
 
 ## 已实现
 
@@ -18,7 +18,7 @@
 
 ## 环境与安装
 
-需要 Node.js **24.9+**，以及提供 `agents`、`subagents`、`tools`、`workingDirectory` 服务和 `startActivation()` API 的 DSH 宿主。适配代码对照 DSH 提交 `ce7073d51254c26cd63b22a60835b8f948deb447`；尚未在真实 DSH + 模型环境完成端到端验收。预稳定 API 升级后应重新验证，不声明覆盖所有 DSH 版本。
+需要 Node.js **24.9+**，以及提供 `agents`、`subagents`、`tools`、`workingDirectory` 服务和 `startActivation()` API 的 DSH 宿主。已在官方 DSH **0.2.1-rc.5** 验证本地安装及已认证 RPC；尚未完成真实模型任务的端到端验收。预稳定 API 升级后应重新验证，不声明覆盖所有 DSH 版本。
 
 内核使用原生 ESM `.mjs`；浏览器 UI 使用 React，并通过 esbuild 生成 DSH 可加载的 `dist/client.js`。该产物随仓库和安装包提交，使用者安装时无需自行编译。`node:sqlite` 由 Node 提供，Cordis、Typert 和浏览器 React 由 DSH 宿主提供。
 
@@ -62,7 +62,7 @@ dsh plugin --profile web add file:.
 
 浏览器操作仅允许当前 DSH Host 的 owner；非 owner 的分享访问者不能使用这些 RPC。历史任务可直接查看；执行操作需要所属主会话已加载。
 
-如果仍然没有入口，请检查安装版本是否为 `0.2.0`、安装与启动是否使用同一 `DSH_HOME` / profile，并确认启动日志没有 `organization-host` 加载失败。升级方法见 [配置与运行](docs/operations.md#更新到带界面的版本)。
+如果仍然没有入口，请检查安装版本是否为 `0.2.1`、安装与启动是否使用同一 `DSH_HOME` / profile，并确认启动日志没有 `organization-host` 加载失败。**0.2.0 中合法 owner 被误判为未授权的问题已在 0.2.1 修复**；遇到“无法连接组织服务”及 owner 身份错误时先更新。升级方法见 [配置与运行](docs/operations.md#更新到带界面的版本)。
 
 ### 模型工具
 
@@ -110,6 +110,8 @@ npm pack --dry-run
 `demo` 使用模拟 Runtime，展示一次驳回后重新规划并完成六部任务，不调用模型、不修改业务项目。测试覆盖 SQLite 重启恢复、双连接抢占、人工批准、驳回预算、并发、取消清理、跨会话拒绝、UI 权限、RPC、浏览器模块和插件生命周期夹具。
 
 浏览器点击验证：先执行 `npx playwright install chromium`，再运行 `npm run test:browser`。它加载实际 `dist/client.js`，通过真实内核和模拟 Runtime 验证启动、批准、详情、取消、重试、中英文和窄窗口；不等同于真实 DSH + 模型端到端验收。截图输出到 `.cache/`。
+
+可选真实宿主验证：把 `ORGANIZATION_DSH_CLI` 设置为官方 DSH 的 `lib/bin.js` 路径，再运行 `npm run test:host`。脚本创建隔离 home、安装本插件，通过官方启动凭据认证后检查 RPC，结束后停止宿主并删除测试 home；不调用模型，也不读取现有 DSH 数据。
 
 ## 当前边界
 

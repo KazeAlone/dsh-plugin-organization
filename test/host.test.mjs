@@ -45,8 +45,14 @@ test('packaged host registers usable tools, drives the adapter and unwinds effec
     assert.equal(ctx.services.get('organization'), service)
     assert.equal(descriptors.length, 7)
     assert.throws(() => service.uiOverview(''), { code: 'organization/error', isDSHRemoteError: true, details: { code: 'UNAUTHORIZED' } })
-    ctx.invocation = { peer: { principal: { kind: 'owner' } } }
-    assert.equal(service.uiOverview('').sessions[0].id, 'owner')
+    // The actual Gateway derives a per-request receiver; the construction Context remains unauthenticated.
+    const ownerReceiver = Object.create(service)
+    ownerReceiver.ctx = Object.assign(Object.create(ctx), { invocation: { peer: { principal: { kind: 'owner' } } } })
+    assert.equal(ownerReceiver.uiOverview('').sessions[0].id, 'owner')
+    assert.equal(ctx.invocation, undefined)
+    const guestReceiver = Object.create(service)
+    guestReceiver.ctx = Object.assign(Object.create(ctx), { invocation: { peer: { principal: { kind: 'guest' } } } })
+    assert.throws(() => guestReceiver.uiOverview(''), { details: { code: 'UNAUTHORIZED' } })
     assert.deepEqual([...tools.keys()].sort(), ['organization_cancel', 'organization_resume', 'organization_start', 'organization_status'])
     const exec = { agent: owner, signal: new AbortController().signal }
     const created = await tools.get('organization_start').execute({ requirement: 'build' }, exec)

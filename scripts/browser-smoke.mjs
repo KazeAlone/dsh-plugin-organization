@@ -37,7 +37,7 @@ const engine = new OrganizationEngine(store, {
 })
 const owner = { id: 'project-session', session: { header: { title: '任务管理器', cwd: '/Users/loong/Developer/projects/taskboard' } } }
 const api = new OrganizationHostApi(engine, threeProvinces({ humanApproval: true }), id => id === owner.id ? owner : undefined, async () => owner.session.header.cwd)
-const ui = new OrganizationUiApi(api, () => [owner], () => ({ peer: { principal: { kind: 'owner' } } }))
+const ui = new OrganizationUiApi(api, () => [owner])
 const allowed = new Map(ORGANIZATION_DESCRIPTORS.map(item => [item.method, item]))
 const routes = { uiOverview: 'overview', uiSnapshot: 'snapshot', uiStart: 'start', uiCancel: 'cancel', uiResume: 'resume', uiRetry: 'retry', uiApprove: 'approve' }
 const server = createServer(async (request, response) => {
@@ -49,7 +49,7 @@ const server = createServer(async (request, response) => {
       const descriptor = allowed.get(method)
       assert.ok(descriptor); assert.equal(args.length, descriptor.parameters.length)
       args.forEach((value, index) => descriptor.parameters[index].codec.create().parse(value))
-      response.end(JSON.stringify({ ok: true, value: await ui[routes[method]](...args) }))
+      response.end(JSON.stringify({ ok: true, value: await ui[routes[method]](...args, { peer: { principal: { kind: 'owner' } } }) }))
     } catch (error) { response.end(JSON.stringify({ ok: false, error: { code: error.code || 'ERROR', message: error.message } })) }
     return
   }

@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-organization",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Durable, version-gated Agent organizations for DeepSeek Harness",
   "type": "module",
   "main": "./src/host.mjs",
@@ -52,7 +52,8 @@
     "demo": "node examples/demo.mjs",
     "prepack": "npm run build && npm run check && npm test",
     "build": "node scripts/build-client.mjs",
-    "test:browser": "node scripts/browser-smoke.mjs"
+    "test:browser": "node scripts/browser-smoke.mjs",
+    "test:host": "node scripts/host-rpc-smoke.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "*",
