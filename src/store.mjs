@@ -62,6 +62,13 @@ export class SqliteStore {
       .all(id, after).map(row => ({ seq: row.seq, revision: row.revision, ...JSON.parse(row.data) }))
   }
 
+  recentEvents(id, limit = 80) {
+    this.get(id)
+    demand(Number.isSafeInteger(limit) && limit > 0 && limit <= 200, 'INVALID_CURSOR', 'Event limit must be 1–200')
+    return this.db.prepare('SELECT seq,revision,data FROM events WHERE run_id=? ORDER BY seq DESC LIMIT ?')
+      .all(id, limit).reverse().map(row => ({ seq: row.seq, revision: row.revision, ...JSON.parse(row.data) }))
+  }
+
   transaction(fn) {
     this.db.exec('BEGIN IMMEDIATE')
     try { const result = fn(); this.db.exec('COMMIT'); return result }

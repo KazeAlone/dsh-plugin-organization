@@ -2,7 +2,7 @@
 
 ## Scope
 
-The first release implements an executable organization kernel. It deliberately stops before a visual editor. A future editor must produce the same validated definition used by the scheduler, rather than maintain a separate graph that only resembles execution.
+The plugin implements an executable organization kernel and, since 0.2.0, a DSH browser workbench. The workbench views and controls actual persisted runs. Organization/workflow definitions remain read-only; a future editor must produce the same validated definition used by the scheduler.
 
 The implementation is original. Research references: [TeamFlow 89aec4b](https://github.com/MichaelShii/dsh-plugin-teamflow/tree/89aec4b094d0450b37c54d65f5dea469e0c01f02) and [DSH ce7073d](https://github.com/deepseek-ai/deepseek-harness/tree/ce7073d51254c26cd63b22a60835b8f948deb447). No TeamFlow source was copied.
 
@@ -60,18 +60,30 @@ The host polls runnable runs whose owner Agent is loaded. Reopening an owner ses
 
 ## DSH integration
 
-`src/host.mjs` is a Cordis Service requiring `agents`, `subagents`, `tools`, and `workingDirectory`. The bundle patch inserts it in the host plane. Tools and the poller are reversible effects; unload stops the poller, aborts/joins local runtime work, then closes SQLite.
+`src/host.mjs` extends TypertRemoteService and requires `agents`, `subagents`, `tools`, `workingDirectory`, and `typert`. The bundle patch inserts it in the host plane. Tools, RPC registrations and the poller are reversible effects; unload stops the poller, aborts/joins local runtime work, then closes SQLite.
 
 The adapter explicitly selects the role's registered Subagent provider and uses `delivery: caller`. It publishes the child id to attempt metadata and collects only completed results. After publication, cancellation uses the activation's `dispose()` handle, not only the original signal. Cleanup errors produce unknown outcomes. Independent presets and model options are sent only when explicitly configured; the DSH provider remains responsible for rejecting unsupported capabilities.
 
 This release does not implement cold child continuation. A retry is a fresh activation after known cleanup, with persisted upstream artifacts and review feedback. It does not import TeamFlow's progress guard, retry classifier or metering code.
+
+## Browser workbench
+
+`src/descriptors.mjs` is shared between the Host registry and browser mount. Only the seven `ui*` methods are exported. Wire string codecs validate argument types; business methods validate run/session association and operation preconditions. Host business failures are converted to RemoteError so browser errors retain useful diagnostics.
+
+Every UI endpoint requires `ctx.invocation.peer.principal.kind === 'owner'`. A missing principal fails closed, even for read calls. Session ids alone never establish authority. Non-owner shared callers cannot inspect or mutate organizations. The human approval actor is derived from the owner-only browser channel; no wire parameter can specify an actor. Model tools keep their separate exact-live-Agent ownership rules and cannot invoke human approval.
+
+The global sidebar entry and `main` seat share the key `organization`; a `conversation.view` contribution renders the same component scoped to its owning session. The stamped CJS bundle registers with `window.__ModuleLoader__` and uses the Host React external. Package-local modules and CSS are bundled. Locale dictionaries and injected styles have reversible lifetimes.
+
+Polling is serialized with a 2-second delay after each refresh finishes. Unmounted or changed-run requests cannot overwrite the current view. The backend lists compact run summaries and supplies a full snapshot plus the latest 80 chronological events only for the selected run. The role hierarchy and topological workflow layers are computed from the actual definition, not a separate hardcoded diagram.
+
+Browser tests load the shipped stamped bundle through a mock DSH module/slot carrier, connect it to the actual SQLite/kernel/UI facade, and substitute only the Agent Runtime. They verify visible entry registration, empty state, start, review/rejection history, digest-bound human approval, node attempts, cancellation, retry, session scoping, English rendering, responsive layout and teardown. These are browser integration fixtures, not a real-model E2E claim.
 
 ## Next increments
 
 1. Real DSH profile smoke with restricted planner/reviewer presets and a full DSH SDK engineering node; freeze the supported host version.
 2. Runtime capability discovery, durable attempt cancellation handles, progress/usage events, and continuation where supported.
 3. Versioned artifact references and host-executed verification policies instead of relying only on model output.
-4. Typed RPC descriptors and authenticated operator commands for the Studio backend.
-5. Organization editor, workflow editor and run/event inspector over this same execution model.
+4. Evolve the owner-only RPC into explicit delegated permissions if multi-user support is introduced.
+5. Add editable organization/workflow definitions over the existing workbench and execution model.
 
 Cross-machine workers and enterprise tenancy need a separate authorization, mailbox and distributed ownership design; sharing a SQLite file is not that design.

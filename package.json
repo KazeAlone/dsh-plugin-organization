@@ -1,27 +1,84 @@
 {
   "name": "dsh-plugin-organization",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Durable, version-gated Agent organizations for DeepSeek Harness",
   "type": "module",
   "main": "./src/host.mjs",
-  "bin": { "dsh-organization": "./scripts/control.mjs" },
+  "bin": {
+    "dsh-organization": "./scripts/control.mjs"
+  },
   "exports": {
     ".": "./src/host.mjs",
     "./core": "./src/index.mjs",
     "./runtime/dsh": "./src/runtime/dsh.mjs",
-    "./template": "./templates/three-provinces.mjs"
+    "./template": "./templates/three-provinces.mjs",
+    "./client": "./dist/client.js",
+    "./remote": "./src/descriptors.mjs"
   },
-  "files": ["src", "templates", "scripts/control.mjs", "cordis.patch.yml", "README.md", "docs", "LICENSE"],
-  "engines": { "node": ">=24.9.0" },
-  "dsh": { "manifestVersion": 1, "bundle": { "patch": "./cordis.patch.yml" } },
+  "files": [
+    "src",
+    "dist",
+    "templates",
+    "scripts/control.mjs",
+    "cordis.patch.yml",
+    "README.md",
+    "docs",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=24.9.0"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-modules",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ],
+      "immediately": false
+    }
+  },
   "scripts": {
     "test": "node --test",
     "check": "node scripts/check.mjs",
     "demo": "node examples/demo.mjs",
-    "prepack": "npm run check && npm test"
+    "prepack": "npm run build && npm run check && npm test",
+    "build": "node scripts/build-client.mjs",
+    "test:browser": "node scripts/browser-smoke.mjs"
   },
-  "peerDependencies": { "@deepseek-ai/cordis": "*" },
-  "peerDependenciesMeta": { "@deepseek-ai/cordis": { "optional": true } },
-  "repository": { "type": "git", "url": "https://github.com/KazeAlone/dsh-plugin-organization.git" },
-  "license": "MIT"
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-typert-protocol": "*",
+    "react": ">=18 <20"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-typert-protocol": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KazeAlone/dsh-plugin-organization.git"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.25.12",
+    "playwright": "1.56",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
 }

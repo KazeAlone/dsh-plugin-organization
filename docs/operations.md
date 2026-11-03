@@ -60,14 +60,14 @@ Node 需 24.9+；SQLite 文件只放本机磁盘。不要把数据库放到跨�
 
 ## 人工批准
 
-模型没有 `organization_approve` 工具。由能够访问本机数据库的操作员运行：
+模型没有 `organization_approve` 工具。Host owner 可以在工作台点击等待批准的节点，检查输入产物并勾选确认后，批准该精确版本；也可以由能够访问本机数据库的操作员运行：
 
 ```sh
 node scripts/control.mjs --database /absolute/path/organization.sqlite status RUN_ID
 node scripts/control.mjs --database /absolute/path/organization.sqlite approve RUN_ID authorize INPUT_DIGEST "检查完成，批准此版"
 ```
 
-身份记录为 `local:<操作系统用户名>`。这是本地文件访问权限下的管理接口，不是多用户认证系统。首版人工节点支持批准，不支持交互式驳回编辑；需要改变已经批准的需求时创建新 run，旧 run 定义和审批记录保留。
+CLI 身份记录为 `local:<操作系统用户名>`，浏览器批准记录为 `host-owner:browser`，只由已认证的 Host owner 调用上下文授予。客户端不能传入 actor。这不是多租户身份系统。人工节点支持批准，不支持交互式驳回编辑；需要改变已经批准的需求时创建新 run，旧 run 定义和审批记录保留。
 
 宿主会继续已加载主会话的可运行任务。若会话尚未加载，先在 DSH 中打开所属主会话，再执行 `organization_resume`。`resume` 不会替用户批准，也不会把失败或未知任务自动重跑。
 
@@ -96,4 +96,25 @@ node scripts/control.mjs reconcile RUN_ID NODE_ID stopped "已确认旧进程退
 
 内核的 `store.events(runId, afterSeq)` 每次最多返回 1000 个事件，用最后一个 `seq` 继续读取。本地 `events` 命令显示第一页。状态 JSON 包含完整结果和尝试记录；不要向无权访问该工作区的人暴露该文件或接口。
 
-未来 Studio 应使用经过认证的 RPC 层访问这些服务。本版没有注册 Typert RPC 描述符，没有浏览器入口，也不提供多租户访问控制。
+0.2.0 已注册 owner-only Typert RPC 和浏览器入口。所有 UI 请求都检查 Host 调用上下文，分享链接中的非 owner 调用者会被拒绝。这里不提供多租户访问控制或分享协作权限。
+
+## 更新到带界面的版本
+
+本地源码开发时：
+
+```sh
+cd ~/Developer/projects/dsh-plugin-organization
+git pull
+npm ci --legacy-peer-deps
+npm run build
+
+cd ~/Developer/tools/dsh
+DSH_HOME="$PWD/data" npx dsh plugin --profile web add file:"$HOME/Developer/projects/dsh-plugin-organization"
+DSH_HOME="$PWD/data" npx dsh web
+```
+
+如果此前没有指定 `DSH_HOME`，继续使用原来的默认 home，不要为了升级切到新 home。重启正在运行的 DSH，再刷新浏览器。左侧栏应出现“组织工作台”；项目会话中应出现“组织”标签。前端 bundle 已随 Git 提交，但本地改动 JSX/CSS 后必须重新构建并同步安装副本。
+
+使用 GitHub 地址安装的用户，可通过 DSH 插件页更新/重新安装 `github:KazeAlone/dsh-plugin-organization`，然后重启宿主并刷新页面。私有仓库仍需本机 GitHub 读取权限。
+
+排查入口缺失时，先确认 `package.json` 中版本为 `0.2.0`，包含 `dsh.client`、`exports["./client"]`，且 `dist/client.js` 存在。浏览器模块必须以包根 `dsh-plugin-organization` 作为宿主插件行名；不要把该行改成 `/core` 或 `/remote` 子路径。缺少 `typert` 服务时宿主插件不会激活，应检查 DSH 版本与 profile 组合。

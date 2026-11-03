@@ -13,7 +13,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+      - run: npm ci --legacy-peer-deps
+      - run: npm run build
       - run: npm run check
       - run: npm test
       - run: npm run demo
       - run: npm pack --ignore-scripts --dry-run
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --legacy-peer-deps
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: organization-ui-screenshots
+          path: .cache/organization-*.png
+          retention-days: 7

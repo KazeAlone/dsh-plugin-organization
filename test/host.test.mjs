@@ -7,8 +7,8 @@ import { tmpdir } from 'node:os'
 
 // Test the real plugin entry with a tiny Cordis lifecycle fixture, not a real DSH host.
 registerHooks({ resolve(specifier, context, next) {
-  if (specifier !== '@deepseek-ai/cordis') return next(specifier, context)
-  return { url: `data:text/javascript,${encodeURIComponent('export class Service { constructor(ctx, name) { this.ctx = ctx; ctx.services.set(name, this) } }')}`, shortCircuit: true }
+  if (specifier !== '@deepseek-ai/dsh-typert-protocol') return next(specifier, context)
+  return { url: `data:text/javascript,${encodeURIComponent('export class TypertRemoteService { constructor(ctx, name) { this.ctx = ctx; ctx.services.set(name, this); this.typertRemote = {service:this,serviceKey:name,namespace:name} } } export class RemoteError extends Error {constructor(code,message,details){super(message);this.code=code;this.details=details;this.isDSHRemoteError=true}}')}`, shortCircuit: true }
 } })
 const { default: OrganizationService } = await import('../src/host.mjs')
 
@@ -18,7 +18,8 @@ test('packaged host registers usable tools, drives the adapter and unwinds effec
     nodes: [{ id: 'work', kind: 'agent', role: 'worker', deps: [], instruction: 'do work' }] }
   const definitionFile = join(dir, 'definition.json')
   writeFileSync(definitionFile, JSON.stringify(definition))
-  const tools = new Map(), disposers = [], owner = { id: 'owner' }
+  const tools = new Map(), disposers = [], owner = { id: 'owner', session: { header: { cwd: dir } } }
+  let descriptors
   let cleaned = 0
   const subagents = {
     list: () => ['spawn'], async startActivation(spec) {
@@ -28,7 +29,8 @@ test('packaged host registers usable tools, drives the adapter and unwinds effec
   }
   const ctx = {
     services: new Map([
-      ['agents', { get: id => id === owner.id ? owner : undefined }], ['subagents', subagents],
+      ['agents', { get: id => id === owner.id ? owner : undefined, list: () => [owner] }], ['subagents', subagents],
+      ['typert', { register(contribution) { descriptors = contribution.invocations; return () => { descriptors = undefined } } }],
       ['workingDirectory', { ensure: async () => dir }],
       ['tools', { register(tool) {
         assert.equal(tool.parameters.type, 'object'); assert.equal(tool.output.schema.type, 'object')
@@ -41,6 +43,10 @@ test('packaged host registers usable tools, drives the adapter and unwinds effec
   const service = new OrganizationService(ctx, { database: join(dir, 'organization.db'), definitionFile, pollMs: 100 })
   try {
     assert.equal(ctx.services.get('organization'), service)
+    assert.equal(descriptors.length, 7)
+    assert.throws(() => service.uiOverview(''), { code: 'organization/error', isDSHRemoteError: true, details: { code: 'UNAUTHORIZED' } })
+    ctx.invocation = { peer: { principal: { kind: 'owner' } } }
+    assert.equal(service.uiOverview('').sessions[0].id, 'owner')
     assert.deepEqual([...tools.keys()].sort(), ['organization_cancel', 'organization_resume', 'organization_start', 'organization_status'])
     const exec = { agent: owner, signal: new AbortController().signal }
     const created = await tools.get('organization_start').execute({ requirement: 'build' }, exec)
@@ -55,6 +61,7 @@ test('packaged host registers usable tools, drives the adapter and unwinds effec
   } finally {
     for (const dispose of disposers.reverse()) await dispose()
     assert.equal(tools.size, 0)
+    assert.equal(descriptors, undefined)
     rmSync(dir, { recursive: true, force: true })
   }
 })

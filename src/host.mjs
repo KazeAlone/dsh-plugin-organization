@@ -1,4 +1,4 @@
-import { Service } from '@deepseek-ai/cordis'
+import { TypertRemoteService, RemoteError } from '@deepseek-ai/dsh-typert-protocol'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
@@ -7,10 +7,12 @@ import { DshRuntime } from './runtime/dsh.mjs'
 import { OrganizationHostApi } from './host-api.mjs'
 import { threeProvinces } from '../templates/three-provinces.mjs'
 import { demand } from './model.mjs'
+import { ORGANIZATION_DESCRIPTORS } from './descriptors.mjs'
+import { OrganizationUiApi } from './ui-api.mjs'
 
 /** Host-plane service. Human approvals are deliberately absent from model tools. */
-export default class OrganizationService extends Service {
-  static inject = ['agents', 'subagents', 'tools', 'workingDirectory']
+export default class OrganizationService extends TypertRemoteService {
+  static inject = ['agents', 'subagents', 'tools', 'workingDirectory', 'typert']
 
   constructor(ctx, config = {}) {
     super(ctx, 'organization')
@@ -27,6 +29,11 @@ export default class OrganizationService extends Service {
     }) } catch (error) { this.store.close(); throw error }
     this.api = new OrganizationHostApi(this.engine, definition, id => agents.get(id),
       (agent, signal) => ctx.get('workingDirectory').ensure(agent, signal))
+    this.ui = new OrganizationUiApi(this.api, () => agents.list(), () => this.ctx.invocation)
+    ctx.effect(() => ctx.get('typert').register({
+      package: 'dsh-plugin-organization', face: 'host', schemas: [],
+      model: { services: [], events: [], objects: [] }, invocations: ORGANIZATION_DESCRIPTORS,
+    }))
     ctx.effect(() => {
       const timer = setInterval(() => {
         try {
@@ -54,4 +61,20 @@ export default class OrganizationService extends Service {
     ]) register(`organization_${action}`, description, { runId: { type: 'string', minLength: 1 } }, ['runId'],
       (args, exec) => this.api[action](args.runId, exec.agent))
   }
+
+  remoteCall(call) {
+    const fail = error => { throw new RemoteError('organization/error', error.message || String(error), { code: error.code || 'INTERNAL' }) }
+    try {
+      const result = call()
+      return result instanceof Promise ? result.catch(fail) : result
+    } catch (error) { return fail(error) }
+  }
+
+  uiOverview(sessionId) { return this.remoteCall(() => this.ui.overview(sessionId)) }
+  uiSnapshot(runId, sessionId) { return this.remoteCall(() => this.ui.snapshot(runId, sessionId)) }
+  uiStart(sessionId, requirement) { return this.remoteCall(() => this.ui.start(sessionId, requirement)) }
+  uiCancel(runId, sessionId) { return this.remoteCall(() => this.ui.cancel(runId, sessionId)) }
+  uiResume(runId, sessionId) { return this.remoteCall(() => this.ui.resume(runId, sessionId)) }
+  uiRetry(runId, sessionId, nodeId, reason) { return this.remoteCall(() => this.ui.retry(runId, sessionId, nodeId, reason)) }
+  uiApprove(runId, sessionId, nodeId, inputDigest, reason) { return this.remoteCall(() => this.ui.approve(runId, sessionId, nodeId, inputDigest, reason)) }
 }
